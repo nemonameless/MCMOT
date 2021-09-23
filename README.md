@@ -5,19 +5,19 @@ This is an extention work of FairMOT, which extends the one-class multi-object t
 </br>
 You can refer to origin fork [FairMOT](https://github.com/ifzhang/FairMOT)
 ## Tracking demo of C5(car, bicycle, person, cyclist, tricycle)
-![image](https://github.com/CaptainEven/MCMOT/blob/master/test2_track.gif)
-![image](https://github.com/CaptainEven/MCMOT/blob/master/test20_track.gif)
-![image](https://github.com/CaptainEven/MCMOT/blob/master/test25_track.gif)
-![image](https://github.com/CaptainEven/MCMOT/blob/master/test27_track.gif)
-![image](https://github.com/CaptainEven/MCMOT/blob/master/test28_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/test2_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/test20_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/test25_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/test27_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/test28_track.gif)
 </br>
 ## Tracking demo of VISDrone dataset
-![image](https://github.com/CaptainEven/MCMOT/blob/master/visdrone_train5_track.gif)
-![image](https://github.com/CaptainEven/MCMOT/blob/master/visdrone_train15_track.gif)
-![image](https://github.com/CaptainEven/MCMOT/blob/master/visdrone_train17_track.gif)
-![image](https://github.com/CaptainEven/MCMOT/blob/master/visdrone_train22_track.gif)
-![image](https://github.com/CaptainEven/MCMOT/blob/master/visdrone_train23_track.gif)
-![image](https://github.com/CaptainEven/MCMOT/blob/master/visdrone_train39_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/visdrone_train5_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/visdrone_train15_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/visdrone_train17_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/visdrone_train22_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/visdrone_train23_track.gif)
+![image](https://github.com/CaptainEven/MCMOT/blob/master/gifs/visdrone_train39_track.gif)
 </br>
 
 ## VisDrone dataset training with 10 object classes
