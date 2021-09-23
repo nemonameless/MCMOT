@@ -632,6 +632,7 @@ class MCJDETracker(object):
         dets = map2orig(dets, h_out, w_out, height, width, self.opt.num_classes)
 
         # ----- parse each object class
+        # 对每个类别的检测结果分开跟踪，使用dict存储轨迹和候选框
         for cls_id in range(self.opt.num_classes):  # cls_id从0开始
             cls_dets = dets[cls_id]
 

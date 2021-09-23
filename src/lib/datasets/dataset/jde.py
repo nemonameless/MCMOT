@@ -925,7 +925,7 @@ class JointDataset(LoadImagesAndLabels):  # for training
                           .format(k, cls_id, start_idx))
 
     def __getitem__(self, idx):
-        # 为子训练集计算起始index
+        # 为子训练集计算起始index ###
         for i, c in enumerate(self.cds):
             if idx >= c:
                 ds = list(self.label_files.keys())[i]

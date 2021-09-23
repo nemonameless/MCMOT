@@ -101,7 +101,7 @@ class MotLoss(torch.nn.Module):
         return loss, loss_stats
 
 
-# 损失函数的定义
+# McMot损失函数的定义: 按类别计算每个类别的reid损失，求和 
 class McMotLoss(torch.nn.Module):
     def __init__(self, opt):
         super(McMotLoss, self).__init__()

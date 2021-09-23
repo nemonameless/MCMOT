@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+# *******************************************************************************
+#
+# Copyright (c) 2021 Baidu.com, Inc. All Rights Reserved
+#
+# *******************************************************************************
+"""
+Authors: Li Jie, lijie47@baidu.com
+Date:    2021/9/22 13:45
+"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -14,15 +24,17 @@ import argparse
 import motmetrics as mm
 import numpy as np
 import torch
+import pandas as pd
 
 from collections import defaultdict
 from lib.tracker.multitracker import JDETracker, MCJDETracker, id2cls
 from lib.tracking_utils import visualization as vis
 from lib.tracking_utils.log import logger
 from lib.tracking_utils.timer import Timer
-from lib.tracking_utils.evaluation import Evaluator
+from lib.tracking_utils.evaluation import Evaluator, EvaluatorMCMOT
+from lib.tracking_utils.mcmot_metric import parse_accs_metrics, seqs_overall_metrics
 import lib.datasets.dataset.jde as datasets
-
+from lib.tracking_utils.io import read_results, gen_bad_labels
 from lib.tracking_utils.utils import mkdir_if_missing
 from lib.opts import opts
 
@@ -60,8 +72,8 @@ def write_results_dict(file_name, results_dict, data_type, num_classes=5):
     """
     if data_type == 'mot':
         # save_format = '{frame},{id},{x1},{y1},{w},{h},1,-1,-1,-1\n'
-        save_format = '{frame},{id},{x1},{y1},{w},{h},1,{cls_id},1\n'
-        save_format = '{frame},{id},{x1},{y1},{w},{h},{score},{cls_id},1\n'
+        # save_format = '{frame},{id},{x1},{y1},{w},{h},1,{cls_id},1\n'
+        save_format = '{frame},{id},{x1},{y1},{w},{h},{score},{cls_id},1\n' # new save_format for multi-class MOT 
     elif data_type == 'kitti':
         save_format = '{frame} {id} pedestrian 0 0 -10 {x1} {y1} {x2} {y2} -10 -10 -10 -1000 -1000 -1000 -10\n'
     else:
@@ -336,13 +348,13 @@ def main(opt,
             data_root, '..', 'outputs', exp_name, seq) if save_images or save_videos else None
         logger.info('start seq: {}'.format(seq))
         dataloader = datasets.LoadImages(
-            osp.join(data_root, seq, 'img1'), opt.img_size)
+            osp.join(data_root, 'sequences', seq), opt.img_size) # for visdrone dataset
         result_filename = os.path.join(result_root, '{}.txt'.format(seq))
-        meta_info = open(os.path.join(data_root, seq, 'seqinfo.ini')).read()
-        frame_rate = int(meta_info[meta_info.find(
-            'frameRate') + 10:meta_info.find('\nseqLength')])
+        # meta_info = open(os.path.join(data_root, seq, 'seqinfo.ini')).read()
+        # frame_rate = int(meta_info[meta_info.find(
+        #     'frameRate') + 10:meta_info.find('\nseqLength')])
         nf, ta, tc = eval_seq(opt, dataloader, data_type, result_filename,
-                              save_dir=output_dir, show_image=show_image, frame_rate=frame_rate)
+                              save_dir=output_dir, show_image=show_image, frame_rate=30)
         n_frame += nf
         timer_avgs.append(ta)
         timer_calls.append(tc)
@@ -353,7 +365,7 @@ def main(opt,
         accs.append(evaluator.eval_file(result_filename))
         if save_videos:
             output_video_path = osp.join(output_dir, '{}.mp4'.format(seq))
-            cmd_str = 'ffmpeg -f image2 -i {}/%05d.jpg -c:v copy {}'.format(
+            cmd_str = 'ffmpeg -f image2 -i {}/%05d.jpg -b 5000k -c:v mpeg4 {}'.format(
                 output_dir, output_video_path)
             os.system(cmd_str)
     timer_avgs = np.asarray(timer_avgs)
@@ -377,100 +389,101 @@ def main(opt,
         result_root, 'summary_{}.xlsx'.format(exp_name)))
 
 
-if __name__ == '__main__':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    opt = opts().init()
+def main_multi(opt,
+               data_root='/data/MOT16/train',
+               det_root=None, seqs=('MOT16-05',),
+               exp_name='demo',
+               save_images=False,
+               save_videos=False,
+               show_image=True):
+    """
+    """
 
-    if not opt.val_mot16:
-        seqs_str = '''KITTI-13
-                      KITTI-17
-                      ADL-Rundle-6
-                      PETS09-S2L1
-                      TUD-Campus
-                      TUD-Stadtmitte'''
-        data_root = os.path.join(opt.data_dir, 'MOT15/images/train')
-    else:
-        seqs_str = '''MOT16-02
-                      MOT16-04
-                      MOT16-05
-                      MOT16-09
-                      MOT16-10
-                      MOT16-11
-                      MOT16-13'''
-        data_root = os.path.join(opt.data_dir, 'MOT16/train')
-    if opt.test_mot16:
-        seqs_str = '''MOT16-01
-                      MOT16-03
-                      MOT16-06
-                      MOT16-07
-                      MOT16-08
-                      MOT16-12
-                      MOT16-14'''
-        data_root = os.path.join(opt.data_dir, 'MOT16/test')
-    if opt.test_mot15:
-        seqs_str = '''ADL-Rundle-1
-                      ADL-Rundle-3
-                      AVG-TownCentre
-                      ETH-Crossing
-                      ETH-Jelmoli
-                      ETH-Linthescher
-                      KITTI-16
-                      KITTI-19
-                      PETS09-S2L2
-                      TUD-Crossing
-                      Venice-1'''
-        data_root = os.path.join(opt.data_dir, 'MOT15/images/test')
-    if opt.test_mot17:
-        seqs_str = '''MOT17-01-SDP
-                      MOT17-03-SDP
-                      MOT17-06-SDP
-                      MOT17-07-SDP
-                      MOT17-08-SDP
-                      MOT17-12-SDP
-                      MOT17-14-SDP'''
-        data_root = os.path.join(opt.data_dir, 'MOT17/images/test')
-    if opt.val_mot17:
-        seqs_str = '''MOT17-02-SDP
-                      MOT17-04-SDP
-                      MOT17-05-SDP
-                      MOT17-09-SDP
-                      MOT17-10-SDP
-                      MOT17-11-SDP
-                      MOT17-13-SDP'''
-        data_root = os.path.join(opt.data_dir, 'MOT17/images/train')
-    if opt.val_mot15:
-        seqs_str = '''KITTI-13
-                      KITTI-17
-                      ETH-Bahnhof
-                      ETH-Sunnyday
-                      PETS09-S2L1
-                      TUD-Campus
-                      TUD-Stadtmitte
-                      ADL-Rundle-6
-                      ADL-Rundle-8
-                      ETH-Pedcross2
-                      TUD-Stadtmitte'''
-        data_root = os.path.join(opt.data_dir, 'MOT15/images/train')
-    if opt.val_mot20:
-        seqs_str = '''MOT20-01
-                      MOT20-02
-                      MOT20-03
-                      MOT20-05
-                      '''
-        data_root = os.path.join(opt.data_dir, 'MOT20/images/train')
-    if opt.test_mot20:
-        seqs_str = '''MOT20-04
-                      MOT20-06
-                      MOT20-07
-                      MOT20-08
-                      '''
-        data_root = os.path.join(opt.data_dir, 'MOT20/images/test')
+    logger.setLevel(logging.INFO)
+    result_root = os.path.join(data_root, '..', 'results', exp_name)
+    mkdir_if_missing(result_root)
+    data_type = 'mot'
+
+    # run tracking
+    seqs_overall = defaultdict(list)
+    n_frame = 0
+    timer_avgs, timer_calls = [], []
+    for seq in seqs:
+        output_dir = os.path.join(
+            data_root, '..', 'outputs', exp_name, seq) if save_images or save_videos else None
+        logger.info('start seq: {}'.format(seq))
+        dataloader = datasets.LoadImages(
+            osp.join(data_root, 'sequences', seq), opt.img_size)
+        result_filename = os.path.join(result_root, '{}.txt'.format(seq))
+        # gt_filename = os.path.join(self.data_root, self.seq_name, 'gt', 'gt.txt')
+        gt_filename = os.path.join(data_root, 'annotations', '{}.txt'.format(seq))
+
+        nf, ta, tc = eval_seq(opt, dataloader, data_type, result_filename,
+                              save_dir=output_dir, show_image=show_image, frame_rate=30)
+        n_frame += nf
+        timer_avgs.append(ta)
+        timer_calls.append(tc)
+
+        # eval
+        logger.info('Evaluate seq: {}'.format(seq))
+        evaluator = EvaluatorMCMOT(opt.num_classes, gt_filename, data_type)
+
+        seq_acc = evaluator.eval_file(result_filename)
+
+        cls_index_name = ['{}_{}'.format(seq, i) for i in range(opt.num_classes)]
+        summary = parse_accs_metrics(seq_acc, cls_index_name, verbose=True)
+        summary.rename(index={'OVERALL': '{}_OVERALL'.format(seq)}, inplace=True)
+
+        for row in range(len(summary)):
+            seqs_overall[row].append(summary.iloc[row:row+1])
+
+        if save_videos:
+            output_video_path = osp.join(output_dir, '{}.mp4'.format(seq))
+            cmd_str = 'ffmpeg -f image2 -i {}/%05d.jpg -b 5000k -c:v mpeg4 {}'.format(
+                output_dir, output_video_path)
+            os.system(cmd_str)
+
+    timer_avgs = np.asarray(timer_avgs)
+    timer_calls = np.asarray(timer_calls)
+    all_time = np.dot(timer_avgs, timer_calls)
+    avg_time = all_time / np.sum(timer_calls)
+    logger.info('Time elapsed: {:.2f} seconds, FPS: {:.2f}'.format(
+        all_time, 1.0 / avg_time))
+
+    cls_summary_list = []
+    for row in range(opt.num_classes):
+        seqs_cls_df = pd.concat(seqs_overall[row])
+        seqs_cls_summary = seqs_overall_metrics(seqs_cls_df)
+        cls_summary_overall = seqs_cls_summary.iloc[-1:].copy()
+        cls_summary_overall.rename(index={'overall_calc': 'overall_calc_{}'.format(row)}, inplace=True)
+        cls_summary_list.append(cls_summary_overall)
+
+    # 生成按序列统计的评估结果和按类别统计的评估结果
+    seqs_summary = seqs_overall_metrics(pd.concat(seqs_overall[opt.num_classes]), verbose=True)
+    class_summary = seqs_overall_metrics(pd.concat(cls_summary_list), verbose=True)
+
+
+if __name__ == '__main__':
+    # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    opt = opts().init()
+    opt.device = torch.device('cuda')
+    data_root = "/ssd2/lijie/data/tracking/VisDrone2019-MOT/VisDrone2019-MOT-val/"
+    seqs_str = '''
+                    uav0000086_00000_v
+                    uav0000137_00458_v
+               '''
+    # uav0000137_00458_v
+    # uav0000268_05773_v
+    # uav0000339_00001_v
+    # uav0000117_02622_v
+    # uav0000182_00000_v
+    # uav0000305_00000_v
     seqs = [seq.strip() for seq in seqs_str.split()]
 
-    main(opt,
-         data_root=data_root,
-         seqs=seqs,
-         exp_name='MOT15_val_all_dla34',
-         show_image=False,
-         save_images=False,
-         save_videos=False)
+    main_multi(opt,
+               data_root=data_root,
+               seqs=seqs,
+               exp_name='VisDrone_val',
+               show_image=False,
+               save_images=False,
+               save_videos=True)

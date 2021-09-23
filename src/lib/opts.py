@@ -252,7 +252,7 @@ class opts(object):
                                  default=True,
                                  help='Whether to use multi-scale training or not')
 
-        # ----------------------1~10 object classes are what we need
+        # ----------------------1~10 object classes are what we need (visdrone dataset)
         # pedestrian      (1),  --> 0
         # people          (2),  --> 1
         # bicycle         (3),  --> 2
@@ -267,7 +267,7 @@ class opts(object):
 
         # others          (11)
         self.parser.add_argument('--reid_cls_ids',
-                                 default='0,1,2,3,4,5,6,7,8,9',  # '0,1,2,3,4' or '0,1,2,3,4,5,6,7,8,9'
+                                 default='0,1,2,3,4,5,6,7,8,9',  # '0,1,2,3,4'
                                  help='')  # the object classes need to do reid
 
         self.parser.add_argument('--norm_wh', action='store_true',
@@ -356,7 +356,7 @@ class opts(object):
         opt.output_res = max(opt.output_h, opt.output_w)
 
         if opt.task == 'mot':
-            opt.heads = {'hm': opt.num_classes,
+            opt.heads = {'hm': opt.num_classes, ### num_classes
                          'wh': 2 if not opt.cat_spec_wh else 2 * opt.num_classes,
                          'id': opt.reid_dim}
             if opt.reg_offset:
@@ -385,7 +385,7 @@ class opts(object):
                     'std': [0.289, 0.274, 0.278],
                     'dataset': 'jde',
                     'nID': 14455,
-                    'nID_dict': {}},
+                    'nID_dict': {}},  # nID_dict for multi-class
         }
 
         class Struct:
